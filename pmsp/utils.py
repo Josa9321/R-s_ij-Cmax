@@ -11,6 +11,7 @@ class SolutionPMSP:
         self.n = len(self.N0)
 
         self.time = time
+        self.obj = pyo.value(model.obj)
 
         self._get_allocations(model)
         self._get_sequences(model)
@@ -35,18 +36,21 @@ class SolutionPMSP:
             j, k = 0, -1
             while k < self.n:
                 k += 1
-                print(k, k < self.n)
                 if pyo.value(model.x[i, j, k]) < 0.5:
-                    print("???")
                     continue
 
                 sequence.append(j)
+
+                if k == 0:
+                    break
+
                 j, k = k, -1
 
             self.sequences_set.append(sequence)
 
     def _test_allocations(self):
-        for (j, i) in enumerate(self.allocations):
+        for j in self.N:
+            i = self.allocations[j]
             assert i >= 0, f"The Job {j} wasn't allocated"
 
     def _test_sequences(self):
@@ -60,7 +64,9 @@ class SolutionPMSP:
         with open(address, 'w') as f:
             solution_as_dict = {
                     'sequences_set': self.sequences_set,
-                    'allocations': self.allocations
+                    'allocations': self.allocations.tolist(),
+                    'obj': self.obj,
+                    'time': self.time
                     }
             json.dump(solution_as_dict, f, indent=4)
 

@@ -19,14 +19,10 @@ def solve_instance(instance, method):
     tic(msg=None)
     results = _solve_while_subtour_is_generated(solver, model)
     solve_time = toc(msg=None)
-    if (results.solver.status == SolverStatus.ok) and (
-        results.solver.termination_condition == TerminationCondition.optimal):
-        return SolutionPMSP(model, solve_time, results, test_sequences=False)
-    return None
+    return SolutionPMSP(model, results, solve_time)
 
 def _solve_while_subtour_is_generated(solver, model):
     results = solver.solve(model)
-    return results
     do_next_iter = (results.solver.status == SolverStatus.ok) and (
             results.solver.termination_condition != TerminationCondition.infeasibleOrUnbounded)
     while do_next_iter:
@@ -45,6 +41,7 @@ def _solve_while_subtour_is_generated(solver, model):
             results = solver.solve(model)
             do_next_iter = (results.solver.status == SolverStatus.ok) and (
                     results.solver.termination_condition != TerminationCondition.infeasibleOrUnbounded)
+    return results
 
 def create_cmax_model(instance: InstancePMSP):
     m = pyo.ConcreteModel()
@@ -69,6 +66,10 @@ def create_cmax_model(instance: InstancePMSP):
     m.c5 = pyo.Constraint(m.M, rule=c5_cmax)
     m.c6 = pyo.ConstraintList()
     m.c7 = pyo.Constraint(m.M, rule=c7_cmax)
+
+    for i in m.M:
+        for j in m.N:
+            m.x[i, j, j].fix(0)
 
     m.obj = pyo.Objective(
             expr=m.Cmax,
@@ -103,7 +104,7 @@ def _get_all_subtours_sets(subtours_sets, model, i):
             continue
 
         cut_value, partition = nx.minimum_cut(g, source, target)
-        if cut_value < 1e-2:
+        if cut_value > 1e-2:
             continue
 
         partition = list(partition[1])

@@ -8,7 +8,7 @@ from pyomo.common.timing import tic, toc
 
 from .utils import SolutionPMSP
 
-def solve_instance(instance, method):
+def solve_instance(instance, method={'time': 120, 'gap': 1e-3, 'print_level': 0}):
     model = create_cmax_model(instance)
 
     solver = pyo.SolverFactory('highs')

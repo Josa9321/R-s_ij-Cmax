@@ -30,7 +30,6 @@ class SolutionPMSP:
 
     def _get_sequences(self, model):
         self.sequences_set = []
-        print_matrix(model.x, model.N0, 0)
         for i in self.M:
             sequence = []
             j, k = 0, -1
@@ -60,14 +59,19 @@ class SolutionPMSP:
                     continue
                 assert j in self.sequences_set[i], f"Job {j}, allocated in ${i}, isn't in a valid sequence that starts at 0. Subtours are being generated"
 
+    def set_object(self):
+        solution_as_dict = {
+                'sequences_set': self.sequences_set,
+                'allocations': self.allocations.tolist(),
+                'obj': self.obj,
+                'time': self.time
+                }
+        return solution_as_dict
+
+
     def save_json(self, address):
+        solution_as_dict = self.set_object()
         with open(address, 'w') as f:
-            solution_as_dict = {
-                    'sequences_set': self.sequences_set,
-                    'allocations': self.allocations.tolist(),
-                    'obj': self.obj,
-                    'time': self.time
-                    }
             json.dump(solution_as_dict, f, indent=4)
 
 def print_matrix(x, N0, i):

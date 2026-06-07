@@ -69,13 +69,17 @@ def create_instance(m: int, n: int, interval_p: tuple = (1, 99), interval_s: tup
 def load_instance():
     pass
 
-def load_json(address):
+def load_json_file(address):
     with open(address, 'r') as f:
         instance_dict = json.load(f)
+    return load_json(instance_dict)
+
+def load_json(instance_dict):
     return InstancePMSP(
             np.array(instance_dict['processing_time']),
             np.array(instance_dict['setup_time'])
             )
+
 
 #= SQL =#
 

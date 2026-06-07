@@ -1,6 +1,10 @@
 import numpy as np
+import pandas as pd
+
 import json
 import pyomo.environ as pyo
+
+from .instance import InstancePMSP
 
 class SolutionPMSP:
     def __init__(self, model, results, time=0, test_sequences=True):
@@ -74,8 +78,74 @@ class SolutionPMSP:
         with open(address, 'w') as f:
             json.dump(solution_as_dict, f, indent=4)
 
-def print_matrix(x, N0, i):
-    for j in N0:
-        for k in N0:
-            print(f'{pyo.value(x[i, j, k]):>4f}', end=' ')
-        print()
+def create_solution_df(sequences_set, instance: InstancePMSP):
+    machine_current_time = np.zeros(instance.m)
+    last_job = np.zeros(instance.m, int)
+    data = []
+    for (i, sequence) in enumerate(sequences_set):
+        for k in sequence[1:]:
+            if k == 0:
+                continue
+
+            j = last_job[i]
+            start_job_time = machine_current_time[i] + instance.setup_time[i, j, k]
+
+            data.append({
+                        'Machine': i,
+                        'Task': f's_{j}{k}',
+                        'Start': machine_current_time[i],
+                        'Finish': start_job_time,
+                        'Type': 'Setup',
+                        'Time': instance.setup_time[i, j, k]
+                })
+
+            data.append({
+                        'Machine': i,
+                        'Task': f'Job {k}',
+                        'Start': start_job_time,
+                        'Finish': start_job_time + instance.processing_time[i, k],
+                        'Type': 'Job',
+                        'Time': instance.processing_time[i, k]
+                    })
+            machine_current_time[i] += instance.setup_time[i, j, k] + instance.processing_time[i, k]
+            last_job[i] = k
+
+        k = sequences_set[i][-1]
+        data.append({
+                    'Machine': i,
+                    'Task': f's_{k}0',
+                    'Start': machine_current_time[i],
+                    'Finish': machine_current_time[i]+instance.setup_time[i, k, 0],
+                    'Type': 'Setup',
+                    'Time': instance.setup_time[i, k, 0]
+            })
+
+    return pd.DataFrame(data)
+
+def create_machines_df(solution_df):
+    data = []
+    makespan = solution_df.Finish.max()
+    for i in solution_df.Machine.unique():
+        processing_time = solution_df[(solution_df.Type=='Job') & (solution_df.Machine == i)].Time.sum()
+        setup_time = solution_df[(solution_df.Type=='Setup') & (solution_df.Machine == i)].Time.sum()
+        idle_time = makespan - (processing_time + setup_time)
+        data.append({
+            'Machine': i, 
+            'Processing Time': processing_time,
+            'Setup Time': setup_time,
+            'Idle Time': idle_time,
+            '% Capacity': processing_time/makespan,
+            '% Setup': setup_time/makespan,
+            '% Idle': idle_time/makespan
+        })
+    
+    return pd.DataFrame(data)
+
+
+
+
+
+
+
+
+

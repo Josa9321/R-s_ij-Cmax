@@ -115,7 +115,9 @@ def create_solution_df(solution, instance):
                         'Start': completion_time[k] - instance.setup_time[i, j, k] - instance.processing_time[i, k],
                         'Finish': completion_time[k] - instance.processing_time[i, k],
                         'Type': 'Setup',
-                        'Time': instance.setup_time[i, j, k]
+                        'Time': instance.setup_time[i, j, k],
+                        'Deviation': 0.0,
+                        'Due Date': 0.0,
                 })
 
             data.append({
@@ -124,7 +126,9 @@ def create_solution_df(solution, instance):
                         'Start': completion_time[k] - instance.processing_time[i, k],
                         'Finish': completion_time[k],
                         'Type': 'Job',
-                        'Time': instance.processing_time[i, k]
+                        'Time': instance.processing_time[i, k],
+                        'Deviation': instance.due_date[k] - completion_time[k],
+                        'Due Date': instance.due_date[k],
                     })
             last_job[i] = k
 
@@ -136,7 +140,9 @@ def create_solution_df(solution, instance):
                     'Start': machine_current_time[i],
                     'Finish': machine_current_time[i]+instance.setup_time[i, k, 0],
                     'Type': 'Setup',
-                    'Time': instance.setup_time[i, k, 0]
+                    'Time': instance.setup_time[i, k, 0],
+                    'Deviation': 0.0,
+                    'Due Date': 0.0,
             })
 
     return pd.DataFrame(data)

@@ -165,12 +165,12 @@ class InstanceDB:
         self.conn.commit()
 
     def load_instance(self, m, n, group, idx):
-        processing_time = self._load_array(m, n, group, idx, "processing_time")
-        setup_time = self._load_array(m, n, group, idx, "setup_time")
-        due_date = self._load_array(m, n, group, idx, "due_date")
+        processing_time = self._load_instance_array(m, n, group, idx, "processing_time")
+        setup_time = self._load_instance_array(m, n, group, idx, "setup_time")
+        due_date = self._load_instance_array(m, n, group, idx, "due_date")
         return InstancePMSP(processing_time, setup_time, due_date)
 
-    def _load_array(self, m, n, group, idx, array_text):
+    def _load_instance_array(self, m, n, group, idx, array_text):
         query = f'SELECT {array_text} FROM instances WHERE (m = ? AND n = ? AND o = ? AND idx = ?)'
         execution = self.cur.execute(
             query,

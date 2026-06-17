@@ -54,6 +54,11 @@ class SolutionPMSP:
 
     def _get_completion_time(self, model):
         self.completion_time = np.zeros(self.n)
+        if model.method == "sum_e-t":
+            for j in model.N:
+                self.completion_time[j] = pyo.value(model.C[j])
+            return
+
         machine_current_time = np.zeros(self.m)
         last_job = np.zeros(self.m, int)
         for (i, sequence) in enumerate(self.sequences_set):
@@ -67,6 +72,7 @@ class SolutionPMSP:
 
                 machine_current_time[i] += model.s[i, j, k] + model.p[i, k]
                 last_job[i] = k
+        return
 
     def _test_allocations(self):
         for j in self.N:

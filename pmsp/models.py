@@ -50,12 +50,12 @@ def create_cmax_model(instance: InstancePMSP, method_name):
     m.y = pyo.Var(m.M, m.N, domain=pyo.Binary)
     m.Cmax = pyo.Var(domain=pyo.NonNegativeReals)
 
-    m.c2 = pyo.Constraint(m.N, rule=c2_cmax)
-    m.c3 = pyo.Constraint(m.M, m.N, rule=c3_cmax)
-    m.c4 = pyo.Constraint(m.M, m.N, rule=c4_cmax)
-    m.c5 = pyo.Constraint(m.M, rule=c5_cmax)
+    m.c2 = pyo.Constraint(m.N, rule=rule_c2)
+    m.c3 = pyo.Constraint(m.M, m.N, rule=rule_c3)
+    m.c4 = pyo.Constraint(m.M, m.N, rule=rule_c4)
+    m.c5 = pyo.Constraint(m.M, rule=rule_c5)
     m.gsec = pyo.ConstraintList()
-    m.c7 = pyo.Constraint(m.M, rule=c7_cmax)
+    m.c7 = pyo.Constraint(m.M, rule=rule_c7_cmax)
 
     for i in m.M:
         for j in m.N:
@@ -67,19 +67,19 @@ def create_cmax_model(instance: InstancePMSP, method_name):
             )
     return m
 
-def c2_cmax(m, j):
+def rule_c2(m, j):
     return sum(m.y[i, j] for i in m.M) == 1
 
-def c3_cmax(m, i, j):
+def rule_c3(m, i, j):
     return sum(m.x[i, j, k] for k in m.N0 if j != k) == m.y[i, j]
 
-def c4_cmax(m, i, k):
+def rule_c4(m, i, k):
     return sum(m.x[i, j, k] for j in m.N0 if j != k) == sum(m.x[i, k, j] for j in m.N0 if j != k)
 
-def c5_cmax(m, i):
+def rule_c5(m, i):
     return sum(m.x[i, 0, k] for k in m.N0) == 1
 
-def c7_cmax(m, i):
+def rule_c7_cmax(m, i):
     return sum(m.s[i, j, k] * m.x[i, j, k] for j in m.N0 for k in m.N0 if j != k
                ) + sum(m.p[i, j] * m.y[i, j] for j in m.N) <= m.Cmax
 
@@ -95,11 +95,43 @@ def create_et_model(instance: InstancePMSP, method_name):
     m.N0 = pyo.Set(initialize=instance.N0)
     m.N = pyo.Set(initialize=instance.N)
 
-    m.p = pyo.Param(m.M, m.N, initialize=instance.p)
-    m.s = pyo.Param(m.M, m.N0, m.N0, initialize=instance.s)
+    m.p = pyo.Param(m.M, m.N0, initialize=instance.p, domain=pyo.NonNegativeReals)
+    m.s = pyo.Param(m.M, m.N0, m.N0, initialize=instance.s, domain=pyo.NonNegativeReals)
+    m.d = pyo.Param(m.N0, initialize=instance.d, domain=pyo.NonNegativeReals)
+
+    m.x = pyo.Var(m.M, m.N0, m.N0, domain=pyo.Binary)
+    m.y = pyo.Var(m.M, m.N, domain=pyo.Binary)
+
+    m.C = pyo.Var(m.N0, domain=pyo.NonNegativeReals)
+    m.E = pyo.Var(m.N, domain=pyo.NonNegativeReals)
+    m.T = pyo.Var(m.N, domain=pyo.NonNegativeReals)
+
+    m.c2 = pyo.Constraint(m.N, rule=rule_c2)
+    m.c3 = pyo.Constraint(m.M, m.N, rule=rule_c3)
+    m.c4 = pyo.Constraint(m.M, m.N, rule=rule_c4)
+    m.c5 = pyo.Constraint(m.M, rule=rule_c5)
+    m.c6 = pyo.Constraint(m.M, m.N0, m.N, rule=rule_c6_et)
+    m.c7 = pyo.Constraint(m.N, rule=rule_c7_et)
+
+    for i in m.M:
+        for j in m.N:
+            m.x[i, j, j].fix(0)
+
+    m.obj = pyo.Objective(
+            expr=sum(m.E[j] + m.T[j] for j in m.N),
+            sense=pyo.minimize,
+            )
 
     return m
 
+def rule_c6_et(m, i, j, k):
+    if j == k:
+        return pyo.Constraint.Skip
+    else:
+        return m.C[k] >= m.C[j] + m.s[i, j, k] + m.p[i, k] - 5000 * (1 - m.x[i, j, k])
+
+def rule_c7_et(m, j):
+    return m.C[j] == m.d[j] + m.T[j] - m.E[j]
 
 ##########################
 # GSEC Related Functions #
